@@ -40,6 +40,8 @@ import java.util.List;
  *
  */
 public class CliOptions {
+    @Option(name="-bind", usage = "bind to ip" , required = false)
+    private  String bindIp="0.0.0.0"; //default to any
     @Option(name="-port", usage = "set UDP port" , required = false)
     private  int port=9999;
     @Option(name="-pmtu", usage = "set PMTU & DF handling (-1=no change,0=DONT,1=ROUTE hints,2=DO,3=PROBE", required = false)
@@ -85,6 +87,7 @@ public class CliOptions {
     public int getPort() {
         return this.port;
     }
+    public String getBindIp() { return  this.bindIp; }
     public int getMessageSize() {
         return this.messageSize;
     }
@@ -163,6 +166,7 @@ public class CliOptions {
         stringBuilder.append(" OS: ").append(os).append("\n");
         stringBuilder.append(" mode: ").append(this.mode).append("\n");
         stringBuilder.append(" samples: ").append(samples).append("\n");
+        stringBuilder.append(" bind: ").append(this.bindIp).append("\n");
         stringBuilder.append(" port: ").append(this.port).append("\n");
         stringBuilder.append(" PMTU setting: ").append(this.pmtu).append("\n");
         stringBuilder.append(" tos setting: ").append(this.tos).append("\n");

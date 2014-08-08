@@ -68,8 +68,10 @@ public class SampleAnalyser {
        long messageSize=size/recievedPktCounter;
        long deltatime=endTime-startTime;
        //calculate bw estimation in kbits/sec (note deltatime = msec)
-       bandwidthSend=messageSize*sendpktCounter*8/deltatime;
-       bandwidthRecieved=messageSize*recievedPktCounter*8/deltatime;
+       if (deltatime>0) {
+            bandwidthSend = messageSize * sendpktCounter * 8 / deltatime;
+            bandwidthRecieved=messageSize*recievedPktCounter*8/deltatime;
+        }
     }
 
     protected void doAnalyse(BloatMessage msg) {

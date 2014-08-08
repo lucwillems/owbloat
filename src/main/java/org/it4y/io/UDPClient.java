@@ -94,8 +94,8 @@ public class UDPClient {
         b.option(ChannelOption.IP_TOS,options.getTOS());
         b.option(ChannelOption.SO_SNDBUF, options.getTxbuffer());
         b.option(ChannelOption.SO_RCVBUF, options.getRxbuffer());
-        this.logger.info("bind...");
-        this.channel = (DatagramChannel) b.bind(new InetSocketAddress("0.0.0.0",0)).channel();
+        this.logger.info("bind to {} ...",options.getBindIp());
+        this.channel = (DatagramChannel) b.bind(new InetSocketAddress(options.getBindIp(),0)).channel();
         this.logger.info("channel: {} {}", this.channel.getClass().getSimpleName(),this.channel);
         //Linux only code here
         //PMTU handling : linux only code on ubuntu >=12.04

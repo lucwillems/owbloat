@@ -51,7 +51,7 @@ import java.util.ArrayList;
  */
 public class UDPServer extends SimpleChannelInboundHandler<BloatMessage>implements Runnable {
         final Logger logger = LoggerFactory.getLogger(UDPServer.class);
-        final int port;
+        //final int port;
         CliOptions options;
         private final ArrayList<BloatSamples> sampless=new ArrayList<BloatSamples>(100);
         private BloatSamples currentSample;
@@ -64,12 +64,12 @@ public class UDPServer extends SimpleChannelInboundHandler<BloatMessage>implemen
     }
 
     public UDPServer(CliOptions options) {
-            this.port = options.getPort();
+            //this.port = options.getPort();
             this.options=options;
         }
 
         public void startServer() {
-            this.logger.info("starting server on port {}", this.port);
+        this.logger.info("starting server on port {}", options.getPort());
         final EventLoopGroup group = new NioEventLoopGroup();
         try {
             final Bootstrap b = new Bootstrap();
@@ -90,7 +90,7 @@ public class UDPServer extends SimpleChannelInboundHandler<BloatMessage>implemen
             b.option(ChannelOption.SO_SNDBUF, options.getTxbuffer());
             b.option(ChannelOption.SO_RCVBUF, options.getTxbuffer());
             b.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-            b.localAddress(this.port);
+            b.localAddress(options.getBindIp(),options.getPort());
             final Channel channel = b.bind().syncUninterruptibly().channel();
             this.logger.info("channel: {}", channel);
             channel.closeFuture().await();
@@ -205,27 +205,31 @@ public class UDPServer extends SimpleChannelInboundHandler<BloatMessage>implemen
         for (final BloatSamples sample : this.sampless) {
                 sample.saveSendToFile(sendOutput);
                 sample.saveRecievedToFile(recieveOutput);
-                SampleAnalyser analyser=new SampleAnalyser(sample,minBaseLine);
-                analyser.analyse();
-                SamplAnalyserValues metrics=analyser.getMetrics();
-                logger.info("id: {} size: {} pkt send: {} pkt recieved: {} lost: {} Ooo Pkts: {} Ooo events: {} Max Ooo: {} Offet: {} owd: {} owdMax: {} owdMin: {}, up: {}, down: {}",
-                        sample.getId(),
-                        metrics.getSize(),
-                        metrics.getSendPkts(),
-                        metrics.getRecievedPkts(),
-                        metrics.getLostPkts(),
-                        metrics.getOooPkts(),
-                        metrics.getOooEvents(),
-                        metrics.getOooMaxPosition(),
-                        metrics.getBaseOffestTime(),
-                        metrics.getOwdValues().getMedian(),
-                        metrics.getOwdValues().getMaxValue(),
-                        metrics.getOwdValues().getMinValue(),
-                        metrics.getBandwidthSend(),
-                        metrics.getBandwidthRecieved());
-               if (sample.getId()>0) {
-                   saveResultToFile(resultOutput, sample, metrics);
-               }
+                try {
+                    SampleAnalyser analyser = new SampleAnalyser(sample, minBaseLine);
+                    analyser.analyse();
+                    SamplAnalyserValues metrics = analyser.getMetrics();
+                    logger.info("id: {} size: {} pkt send: {} pkt recieved: {} lost: {} Ooo Pkts: {} Ooo events: {} Max Ooo: {} Offet: {} owd: {} owdMax: {} owdMin: {}, up: {}, down: {}",
+                            sample.getId(),
+                            metrics.getSize(),
+                            metrics.getSendPkts(),
+                            metrics.getRecievedPkts(),
+                            metrics.getLostPkts(),
+                            metrics.getOooPkts(),
+                            metrics.getOooEvents(),
+                            metrics.getOooMaxPosition(),
+                            metrics.getBaseOffestTime(),
+                            metrics.getOwdValues().getMedian(),
+                            metrics.getOwdValues().getMaxValue(),
+                            metrics.getOwdValues().getMinValue(),
+                            metrics.getBandwidthSend(),
+                            metrics.getBandwidthRecieved());
+                    if (sample.getId() > 0) {
+                        saveResultToFile(resultOutput, sample, metrics);
+                    }
+                } catch (IllegalArgumentException ie) {
+                  logger.error(ie.getMessage());
+                }
         }
     }
 }
