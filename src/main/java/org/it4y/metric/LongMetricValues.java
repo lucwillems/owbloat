@@ -48,5 +48,14 @@ public class LongMetricValues {
 
     public int getMedianPos() {return this.medianPos;}
 
+    public String toString() {
+        StringBuilder stringBuilder = new StringBuilder(128);
+        stringBuilder.append("avg=").append(avgValue);
+        stringBuilder.append(" min=").append(minValue);
+        stringBuilder.append(" max=").append(maxValue);
+        stringBuilder.append(" median[").append(medianPos*100/samples).append("%]=").append(median);
+        stringBuilder.append(" samples=").append(samples);
+        return  stringBuilder.toString();
+    }
 
 }
