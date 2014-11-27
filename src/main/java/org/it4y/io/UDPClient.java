@@ -39,6 +39,9 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import org.it4y.CliOptions;
 import org.it4y.jni.libc;
 import org.it4y.jni.linux.in;
+import org.it4y.metric.ExecutionTimer;
+import org.it4y.metric.LongMetricValues;
+import org.it4y.metric.LongMovingStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,11 +57,15 @@ public class UDPClient {
         long cnt;
         int prevInterval;
         long mesageIntervalNsec;
+        long nrOfpacketPerSample;
         final CliOptions options;
         DatagramChannel channel;
         final InetSocketAddress server;
         RateLimiter rateLimiter;
         private int maxMessageSize;
+        private ExecutionTimer timer;
+        private LongMovingStatistics ioStat;
+        private LongMovingStatistics channelStat;
 
 
     public void setMessageRate(final long rateinKbs) {
@@ -67,12 +74,18 @@ public class UDPClient {
         rateLimiter=RateLimiter.create(bytesperSec,1, TimeUnit.MILLISECONDS);
         maxMessageSize= (int) (this.options.getMessageSize()+BloatSamples.IP_HEADERSIZE+ this.options.getOverhead());
         this.mesageIntervalNsec =1000000000L* maxMessageSize*8L/(rateinKbs*1024L);
+        this.nrOfpacketPerSample=options.getSampleTime()*1000000L/this.mesageIntervalNsec;
         this.logger.info("send rate: {} kbits/sec", rateinKbs);
         this.logger.info("delay per packet: {} nsec", this.mesageIntervalNsec);
+        this.logger.info("packets per sample: {} pkt", this.nrOfpacketPerSample);
+        ioStat=new LongMovingStatistics((int) (this.nrOfpacketPerSample *150/100),66);
+        channelStat=new LongMovingStatistics(options.getSamples(),66);
     }
+
     public UDPClient(final InetSocketAddress server, final CliOptions options) throws InterruptedException {
             this.server = server;
             this.options=options;
+            this.timer=new ExecutionTimer();
             this.setupChannel();
         }
 
@@ -138,7 +151,12 @@ public class UDPClient {
             msg.setSubId(i);
             msg.setSendCreated(msg.getCreated());
             msg.setSendStart(System.nanoTime());
-            this.channel.writeAndFlush(msg);
+            try {
+                timer.startTask();
+                this.channel.writeAndFlush(msg);
+            } finally {
+                timer.endTask();
+            }
             //this is not really needed but warms up the rateLimiter
             rateLimiter.acquire(maxMessageSize);
             Thread.sleep(100);
@@ -149,6 +167,7 @@ public class UDPClient {
             final int padSize=Math.min(this.options.getMessageSize()-BloatMessageCodec.HEADERSIZE, interval * 50);
             this.logger.info("send batch {}/100 padS size: {}", interval, padSize);
             int x=0;
+            timer.reset();
             final long sendStart=System.nanoTime();
             //each sample takes 500 msec default
             final long endTime=System.currentTimeMillis()+ this.options.getSampleTime();
@@ -161,16 +180,26 @@ public class UDPClient {
                 msg.setSubId(x);
                 msg.setSendStart(sendStart);
                 msg.setPadSize(padSize);
-                this.channel.writeAndFlush(msg);
+                try {
+                    timer.startTask();
+                    this.channel.writeAndFlush(msg);
+                } finally {
+                    timer.endTask();
+                    ioStat.addValue(timer.getTime()/1000);
+                }
                 //break loop when we have max packets
                 if (x> this.options.getMaxpck()) {
                     break;
                 }
             }
+            LongMetricValues lm = ioStat.getMetric();
+            logger.info("IO stat: {}",lm);
+            channelStat.addValue(lm.getMedian());
             if (this.options.getSampleDelay() >0) {
                 Thread.sleep(this.options.getSampleDelay());
             }
         }
+        this.logger.info("channelStat: {}", channelStat.getMetric());
         Thread.sleep(2000);
         //send end message
         this.logger.info("send end message for {} msec", this.options.getEndTime());

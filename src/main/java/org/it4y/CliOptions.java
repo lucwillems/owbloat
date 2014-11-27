@@ -174,7 +174,7 @@ public class CliOptions {
         stringBuilder.append(" rx buffer: ").append(this.rxbuffer).append("\n");
         stringBuilder.append(" sample time: ").append(this.sampleTime).append(" msec\n");
         stringBuilder.append(" end time: ").append(this.endTime).append(" msec\n");
-        stringBuilder.append(" max packets per sample: ").append(this.maxpck).append(" msec\n");
+        stringBuilder.append(" max packets per sample: ").append(this.maxpck).append(" pkt\n");
         stringBuilder.append(" overhead: ").append(this.overhead).append(" bytes\n");
         stringBuilder.append(" debug: ").append(this.debug).append("\n");
         stringBuilder.append(" fast increment: ").append(this.fast).append("\n");
